@@ -263,7 +263,92 @@ Final_Lat_Long_Elev_Data_PopName <- Final_Lat_Long_Elev_Data %>%
   rename(pop_name = abbr_site)
 #merge LatLong data onto proportion 
 merged_PollenProp_LatLongElev <- merge(Final_Lat_Long_Elev_Data_PopName, pollen_color_prop_wide, by = "pop_name")
-#project proportions onto the map
+#load and install necessary packages 
+install.packages("maps")
+install.packages("mapdata")
+library(maps)
+library(mapdata)
+library (ggplot2)
+install.packages("tmap", repos = c("https://r-tmap.r-universe.dev",
+                                   "https://cloud.r-project.org"))
+install.packages("spData")
+install.packages("spDataLarge")
+library(sf)
+library(terra)
+library(dplyr)
+library(spData)
+library(spDataLarge)
+library(tmap)    # for static and interactive maps
+library(leaflet) # for interactive maps
+install.packages("mapproj")
+library(mapproj)
+library(mapdata)
+install.packages("rgeos")
+library(rgeos)
+install.packages("maptools")
+library(maptools)
+library(sp)
+library(raster)
+install.packages("rgdal")
+library(rgdal)
+library(ggplot2)
+library(tidyverse)
+#install.packages(c("maps", "mapdata"))
+# the ggmap package.  Might as well get the bleeding edge version from GitHub
+#devtools::install_github("dkahle/ggmap")
+
+#trial and error
+mapdata <- map_data("world")
+view(mapdata)
+
+#general map of the usa
+usa <- map_data("usa") 
+ggplot() + 
+  geom_polygon(data = usa, aes(x = long, y = lat, group = group)) + 
+  coord_quickmap()
+
+#general map of us states
+states <- map_data("state")
+dim(states)
+head(states)
+tail(states)
+ggplot(data = states) + 
+  geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + 
+  coord_quickmap() +
+  guides(fill = FALSE)  # do this to leave off the color legend
+
+#map of region of interest minus canada
+west_coast <- states %>%
+  filter(region %in% c("california", "oregon", "washington", "nevada", "idaho"))
+ggplot(data = west_coast) + 
+  geom_polygon(aes(x = long, y = lat, group = group), fill = "#ADD8E6", color = "black") + 
+  coord_quickmap()
+
+
+#trying to get both Canada and US on a map now 
+#this doesn't work lol
+library(raster)
+# Get data for states of the USA
+states <- getData(country = "USA", level = 1)
+# Get data for provinces of Canada
+provinces <- getData(country = "Canada", level = 1)
+# Define the names of the states and provinces to include
+desired_regions <- c("British Columbia", "California", "Oregon", "Washington", "Nevada", "Idaho")
+# Filter the states dataset to include only the desired regions
+states <- subset(states, admin == "United States" & name %in% desired_regions)
+# Filter the provinces dataset to include only the desired regions
+provinces <- subset(provinces, admin == "Canada" & name %in% "British Columbia")
+# Plot the filtered states and provinces together
+plot(states)
+plot(provinces, add = TRUE)
+
+
+
+#trying to get both Canada and US on a map
+canada <- map_data("worldHires", "Canada")
+map('state', region = c('california', 'nevada', 'oregon', 'washington', 'idaho'), xlim=c(-130,-90), ylim=c(30,60), fill=TRUE, col="gray95")
+map("worldHires","Canada",  xlim=c(-130,-90), ylim=c(30,60), col="gray95", fill=TRUE, add=TRUE)
+
 
 
 ##### Petal color ----
