@@ -199,20 +199,13 @@ pollen_color_prop <- flowersurvey_DOY %>%
          proportion = count / total_count)
 
 #let's plot
-#ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_subj)) + 
-  #geom_bar(stat = "identity", position = "stack") + #creating a stacked bar plot
-  #labs(title = "Proportion of Colors in Each Population",
-       #x = "Population",
-       #y = "Proportion") +
-  #theme_minimal()
-# trying to make the colors match the subjective colors
 library(ggplot2)
-  # Assuming you have a vector of custom colors for each variable
-custom_colors <- c("#ffe4c4", "#c8a2c8", "#C71585", "#800080", "#FFFFFF")
 
+# Assuming you have a vector of custom colors for each variable
+custom_colors <- c("#ffe4c4", "#c8a2c8", "#C71585", "#800080", "#FFFFFF")
 ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_subj)) +
   geom_bar(stat = "identity", position = "stack") +
-  labs(title = "Proportion of Colors in Each Population",
+  labs(title = "Proportion of Pollen Colors in Each Population",
        x = "Population",
        y = "Proportion") +
   theme_minimal() +
@@ -221,11 +214,16 @@ ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_
     plot.background = element_rect(fill = "#242526"),
     text = element_text(color = "white"),  # Text color
     axis.text = element_text(color = "white"),  # Axis text color
-    axis.title = element_text(color = "white"),  # Axis title color
-    plot.title = element_text(color = "white", size = 16, face = "bold"),  # Plot title color and styling
+    axis.title = element_text(color = "white", face = "bold"),  # Axis title color and bold
+    plot.title = element_text(color = "white", size = 16, face = "bold", hjust = 0.5),  # Plot title color and styling
     panel.grid.major = element_blank(),  # Make major grid lines invisible
-    panel.grid.minor = element_blank()   # Make minor grid lines invisible
+    panel.grid.minor = element_blank(),   # Make minor grid lines invisible
+    legend.position = "bottom"  # Move legend to the bottom
   )
+
+
+
+
 ###### Mosaic map plot: pollen color ----
     #start with proportion data frame 
     # use the map pies function 
@@ -349,6 +347,8 @@ canada <- map_data("worldHires", "Canada")
 map('state', region = c('california', 'nevada', 'oregon', 'washington', 'idaho'), xlim=c(-130,-90), ylim=c(30,60), fill=TRUE, col="gray95")
 map("worldHires","Canada",  xlim=c(-130,-90), ylim=c(30,60), col="gray95", fill=TRUE, add=TRUE)
 
+#Megan maps
+
 
 
 ##### Petal color ----
@@ -375,7 +375,7 @@ petal_color_prop <- flowersurvey_DOY %>%
 custom_colors <- c("#c8a2c8", "#C71585", "#800080")
 ggplot(petal_color_prop, aes(x = pop_name, y = proportion, fill = overall_petal_color_subj)) +
   geom_bar(stat = "identity", position = "stack") + #creating a stacked bar plot
-  labs(title = "Proportion of Colors in Each Population",
+  labs(title = "Proportion of Petal Colors in Each Population",
        x = "Population",
        y = "Proportion") +
   theme_minimal() +
@@ -384,13 +384,106 @@ ggplot(petal_color_prop, aes(x = pop_name, y = proportion, fill = overall_petal_
     plot.background = element_rect(fill = "#242526"),
     text = element_text(color = "white"),  # Text color
     axis.text = element_text(color = "white"),  # Axis text color
-    axis.title = element_text(color = "white"),  # Axis title color
-    plot.title = element_text(color = "white", size = 16, face = "bold"),  # Plot title color and styling
+    axis.title = element_text(color = "white", face = "bold"),  # Axis title color and bold
+    plot.title = element_text(color = "white", size = 16, face = "bold", hjust = 0.5),  # Centered plot title
     panel.grid.major = element_blank(),  # Make major grid lines invisible
-    panel.grid.minor = element_blank()   # Make minor grid lines invisible
+    panel.grid.minor = element_blank(),   # Make minor grid lines invisible
+    legend.position = "bottom"  # Move legend to the bottom
   )
 
 ##### Anther color ----
+anther_color_prop <- flowersurvey_DOY %>%
+  #filter out rows in the pollen color with NA or empty strings
+  filter(!is.na(anther_color_subj) & anther_color_subj != "") %>%
+  
+  #let's get rid of any weird spacing and capitalization
+  mutate(
+    anther_color_subj = str_trim(tolower(anther_color_subj))
+  ) %>%
+  
+  #group by population and color, then calculate the count of unique colors for each group
+  group_by(pop_name, anther_color_subj) %>%
+  summarise(count = n()) %>%
+  
+  #group by population, then calculate total count for each population
+  group_by(pop_name) %>%
+  mutate(total_count = sum(count),
+         #calculate proportion of each color within each population
+         proportion = count / total_count)
+
+#plot anther color distribution
+custom_colors <- c("#ffe4c4", "#c8a2c8", "#C71585", "#800080")
+ggplot(anther_color_prop, aes(x = pop_name, y = proportion, fill = anther_color_subj)) +
+  geom_bar(stat = "identity", position = "stack") + #creating a stacked bar plot
+  labs(title = "Proportion of Anther Colors in Each Population",
+       x = "Population",
+       y = "Proportion") +
+  theme_minimal() +
+  scale_fill_manual(values = custom_colors) +
+  theme(
+    plot.background = element_rect(fill = "#242526"),
+    text = element_text(color = "white"),  # Text color
+    axis.text = element_text(color = "white"),  # Axis text color
+    axis.title = element_text(color = "white", face = "bold"),  # Axis title color and bold
+    plot.title = element_text(color = "white", size = 16, face = "bold", hjust = 0.5),  # Plot title color, bold, and centered
+    panel.grid.major = element_blank(),  # Make major grid lines invisible
+    panel.grid.minor = element_blank(),   # Make minor grid lines invisible
+    legend.position = "bottom"  # Move legend to the bottom
+  )
+
+#### VIEWING PLOTS ----
+# I want to view the anthers and pollen color plots side by side
+library(ggplot2)
+library(gridExtra)
+
+# Define custom colors
+custom_colors <- c("#ffe4c4", "#c8a2c8", "#C71585", "#800080", "#FFFFFF")
+# Pollen Proportion Plot 
+Pollen_Proportion_Plot <- ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_subj)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Proportion of Pollen Colors in Each Population",
+       x = "Population",
+       y = "Proportion") +
+  theme_minimal() +
+  scale_fill_manual(values = custom_colors) +
+  theme(
+    plot.background = element_rect(fill = "#242526"),
+    text = element_text(color = "white"),  # Text color
+    axis.text = element_text(color = "white"),  # Axis text color
+    axis.title = element_text(color = "white", face = "bold"),  # Axis title color and bold
+    plot.title = element_text(color = "white", size = 16, face = "bold", hjust = 0.5),  # Plot title color and styling
+    panel.grid.major = element_blank(),  # Make major grid lines invisible
+    panel.grid.minor = element_blank(),   # Make minor grid lines invisible
+    legend.position = "bottom",  # Position legend at the bottom
+    legend.title = element_blank(),  # Remove legend title
+    legend.text = element_text(color = "white")  # Legend text color
+  )
+
+# Anther Proportion Plot
+Anther_Proportion_Plot <- ggplot(anther_color_prop, aes(x = pop_name, y = proportion, fill = anther_color_subj)) +
+  geom_bar(stat = "identity", position = "stack") + #creating a stacked bar plot
+  labs(title = "Proportion of Anther Colors in Each Population",
+       x = "Population",
+       y = "Proportion") +
+  theme_minimal() +
+  scale_fill_manual(values = custom_colors) +
+  theme(
+    plot.background = element_rect(fill = "#242526"),
+    text = element_text(color = "white"),  # Text color
+    axis.text = element_text(color = "white"),  # Axis text color
+    axis.title = element_text(color = "white", face = "bold"),  # Axis title color and bold
+    plot.title = element_text(color = "white", size = 16, face = "bold", hjust = 0.5),  # Plot title color and styling
+    panel.grid.major = element_blank(),  # Make major grid lines invisible
+    panel.grid.minor = element_blank(),   # Make minor grid lines invisible
+    legend.position = "bottom",  # Position legend at the bottom
+    legend.title = element_blank(),  # Remove legend title
+    legend.text = element_text(color = "white")  # Legend text color
+  )
+
+# Arrange plots side by side
+grid.arrange(Pollen_Proportion_Plot, Anther_Proportion_Plot, ncol = 2)
+
+
 
 
 #### CHECK FOR OUTLIERS ####

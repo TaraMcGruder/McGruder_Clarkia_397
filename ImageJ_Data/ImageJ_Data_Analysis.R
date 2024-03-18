@@ -100,3 +100,44 @@ ggplot(data = ImageJ_Data_Cleaned_NAomit_Rename, aes(x = pop_name, y = trough_le
   ggtitle("Right Trough Length by Population") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 #MERGE CLIMATIC DATA----
+# Reading in CSV file with climate data
+climate_data_1981_2022_ALL <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/ClimateNA_pop_information_1981-2022MSY.csv")
+
+#Reformat CSV file to pull out combined Tave, PPT, CMD, and DD1040 across all months
+ave_climate_data_1981_2022 <- climate_data_1981_2022_ALL %>%
+  #select necessary columns
+  select(c("Year", "ID2", "Latitude", "Longitude", "Elevation", "MAT", "MAP",
+           "DD1040", "CMD")) %>%
+  rename(pop_name = ID2) %>%
+  group_by(pop_name) %>%
+  summarize(
+    ttl_years = n_distinct(Year),
+    MAT_ave = mean(MAT),
+    MAT_sd = sd(MAT),
+    MAT_se = MAT_sd / sqrt(ttl_years - 1),
+    MAP_ave = mean(MAP),
+    MAP_sd = sd(MAP),
+    MAP_se = MAP_sd / sqrt(ttl_years - 1),
+    CMD_ave = mean(CMD),
+    CMD_sd = sd(CMD),
+    CMD_se = CMD_sd / sqrt(ttl_years - 1),
+    DD1040_ave = mean(DD1040),
+    DD1040_sd = sd(DD1040),
+    DD1040_se = DD1040_sd / sqrt(ttl_years - 1),
+    latitude = first(Latitude),
+    longitude = first(Longitude),
+    elevation = first(Elevation)
+  ) %>%
+  filter(!(pop_name %in% c("BBL", "GPS"))) %>%
+  select(-ttl_years)
+
+# Install the dplyr package if not already installed
+install.packages("dplyr")
+# Load the dplyr package
+library(dplyr)
+
+# combine climatic data frame to ImageJ data frame
+ImageJ_Data_Cleaned_NAomit_Rename_clim <- ImageJ_Data_Cleaned_NAomit_Rename %>%
+  #left join by the two columns that include the pick abbreviation in the two data frames
+  left_join(ave_climate_data_1981_2022, by = c("pop_name" = "pop_name"))
+
