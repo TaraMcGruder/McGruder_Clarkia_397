@@ -72,18 +72,43 @@ library(stringr)
 
 # Now that you have finished the huge task of entering your data...
 # Time to load the data using the relative path/directory on the computer
-flowersurvey <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/flowersurvey.csv")
+# Louisa edited the below directory to work in github when people are working in the file
+
+flowersurvey <- read.csv("TaraClarkiaFloralData/flowersurvey.csv")
+
+# first let's look at the data
+summary(flowersurvey)
+# there are some cells that include empty spaces instead of NAs
+# replace all empty values in your flowersurvey data frame with NA. 
+# also dates are read as characters right now, not dates
+
+# Identify character and numeric columns (data contains both)
+#for a character column
+# returns a logical vector of TRUE for character column and FALSE for anything else
+char_cols <- sapply(flowersurvey, is.character)
+# same for numeric columns
+num_cols <- sapply(flowersurvey, is.numeric)
+# this will allow us to selectively applying functions or 
+# operations to specific column types.
+
+# Replace empty values in character columns with NA using mutate_if()
+# With the dplyr package, use %>% (pipe) operator to manipulate the data 
+# in a bunch of ways at the "same time"
+
+flowersurvey <- flowersurvey %>%
+  mutate_if(char_cols, ~if_else(. == "", NA_character_, .)) %>%
+  mutate_if(num_cols, ~if_else(is.na(.), NA_real_, .))
 
 # You used "m/d/y" format, but we need to tell the program to read it as that
 # instead of simply a random character variable
 
 # mdy(): function to convert any date column to a Date object
+
 flowersurvey$bud_emerg_date <- mdy(flowersurvey$bud_emerg_date)
 flowersurvey$flwr_date <- mdy(flowersurvey$flwr_date)
 flowersurvey$scnd_flwr_date <- mdy(flowersurvey$scnd_flwr_date)
 flowersurvey$third_flwr_date <- mdy(flowersurvey$third_flwr_date)
 flowersurvey$fourth_flwr_date <- mdy(flowersurvey$fourth_flwr_date)
-
 
 # Now we should make a new data frame that has DOY instead of the date
 # DOY is January 01 = 0
@@ -100,24 +125,25 @@ flowersurvey$fourth_flwr_date <- mdy(flowersurvey$fourth_flwr_date)
 # To convert DOY to a continuous DOY variable,
   # create a column that includes the year and then "if" statements"
 
-flowersurvey_DOY <- flowersurvey %>% 
-mutate(across(where(is.character), str_trim)) %>%
+flowersurvey_DOY <- flowersurvey %>%
+  # first make sure there are no random spaces before or after each string in a cell
+  mutate(across(where(is.character), str_trim)) %>%
 
-# Create new columns 'year_bud' and 'bud_doy'
-  # mutate(newcolumn = ANY FUNCTIONS WITH (old column)) function: create new columns based on existing columns
-  # can derive new variables this way.
-# the year() function extracts the year from the date column.
+  # Create new columns 'year_bud' and 'bud_doy'
+    # mutate(newcolumn = ANY FUNCTIONS WITH (old column)) function: create new columns based on existing columns
+    # can derive new variables this way.
+  # the year() function extracts the year from the date column.
   mutate(year_bud = year(bud_emerg_date),
          # The yday() function converts date to DOY
          bud_doy = yday(bud_emerg_date)
          # ifelse() function to add 365 to DOY if the year is 2024
          + ifelse(year_bud == 2024, 365, 0)) %>%
   
-# Create new columns 'year_flwr' and 'flwr_doy'
+  # Create new columns 'year_flwr' and 'flwr_doy'
   mutate(year_flwr = year(flwr_date),
          flwr_doy = yday(flwr_date) + ifelse(year_flwr == 2024, 365, 0)) %>%
   
-# Create new columns 'year_scnd_flwr' and 'scnd_flwr_doy'
+  # Create new columns 'year_scnd_flwr' and 'scnd_flwr_doy'
   mutate(year_scnd_flwr = year(scnd_flwr_date),
          scnd_flwr_doy = yday(scnd_flwr_date) + ifelse(year_scnd_flwr == 2024, 365, 0)) %>%
   
@@ -125,10 +151,10 @@ mutate(across(where(is.character), str_trim)) %>%
   #mutate(year_third_flwr = year(third_flwr_date),
          #third_flwr_doy = yday(third_flwr_date) + ifelse(year_third_flwr == 2024, 365, 0)) %>%
 
-# rename tag_name as pop_fam so we know it is telling us the population and family
+  # rename tag_name as pop_fam so we know it is telling us the population and family
   rename(pop_fam = tag_name) %>%
   
-# mutate() to modify existing column and add a new one with just population
+  # mutate() to modify existing column and add a new one with just population
     #extracting words from a string, taking the first word, separated by "_"
   mutate(pop_name = word(pop_fam, 1, sep = "_")) %>%
  
@@ -140,12 +166,13 @@ mutate(across(where(is.character), str_trim)) %>%
   # add a "-" to get rid of certain columns
    select(-c(location,
              exclude,
+             exclude.1,
             notes,
             X,
             key),
-#getting rid of columns that contain the phrase "date"         
+  # getting rid of columns that contain "date"         
    -contains("date"),
-# check to see if removing date and year can be combined in one line
+  # getting rid of columns that contain "year"
     -contains("year")) %>%
 
 # create two new columns for the time between bud and first, and first and second flower 
@@ -165,13 +192,25 @@ ggplot(data = flowersurvey_DOY) +
 summary(flowersurvey_DOY)
 
 
-# plot the data
+# plot day of flower by population
 ggplot(flowersurvey_DOY, aes(x = flwr_doy, y = pop_name)) +
+  # getting rid of the grey behind
+  theme_bw() +
   geom_boxplot()
 
-ggplot() +
-  geom_boxplot(data = flowersurvey_DOY, aes(x = pop_name, 
-                                           y = ttl_stem_lngth_flwr))
+# plot height of first flower by population
+ggplot(data = flowersurvey_DOY, aes(x = pop_name, y = ttl_stem_lngth_flwr)) +
+  geom_point() +
+  theme_bw()
+# great news!! This is very similar to Louisa's data, lovely to see
+
+# plot day to first flower from bud
+ggplot(flowersurvey_DOY, aes(x = time_fst_flwr, y = pop_name)) +
+  # getting rid of the grey behind
+  theme_bw() +
+  geom_boxplot()
+# interesting data, most of the time it is 15-20 days after budding that the first flower will appear
+# keep in mind that weekly census was done for budding
 
 # COLOR PROPORTION DATA AND GRAPHING ----
 #what about looking at color stuff, possibly look at the proportion of diff. colors
@@ -249,8 +288,9 @@ library(tidyr)
 ##fix proportion data frames to be usable for a mosaic plot  
 pollen_color_prop_wide <- pollen_color_prop %>%
   pivot_wider(names_from = pollen_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
+
 #clean the lat long data info (select populations, columns to keep)
-Lat_Long_Elev_Data <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/Clarkia_seed_inventory - LatLongElev.csv")
+Lat_Long_Elev_Data <- read.csv("TaraClarkiaFloralData/Clarkia_seed_inventory - LatLongElev.csv")
 library(dplyr)
   #select the columns to keep 
 Selected_Lat_Long_Elev_Data <- select(Lat_Long_Elev_Data, "abbr_site", "lat", "long", "elev_m")
@@ -373,6 +413,7 @@ petal_color_prop <- flowersurvey_DOY %>%
 
 #let's plot?
 custom_colors <- c("#c8a2c8", "#C71585", "#800080")
+
 ggplot(petal_color_prop, aes(x = pop_name, y = proportion, fill = overall_petal_color_subj)) +
   geom_bar(stat = "identity", position = "stack") + #creating a stacked bar plot
   labs(title = "Proportion of Petal Colors in Each Population",
@@ -498,8 +539,10 @@ print(selected_id)
 
 #### ADDING CLIMATIC DATA ####
 
+# CHECK FOR THE NEW FILE THAT LOUISA ADDED
+
 # Reading in CSV file with climate data
-climate_data_1981_2022_ALL <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/ClimateNA_pop_information_1981-2022MSY.csv")
+climate_data_1981_2022_ALL <- read.csv("TaraClarkiaFloralData/ClimateNA_pop_information_1981-2022MSY.csv")
 
 #Reformat CSV file to pull out combined Tave, PPT, CMD, and DD1040 across all months
 ave_climate_data_1981_2022 <- climate_data_1981_2022_ALL %>%
