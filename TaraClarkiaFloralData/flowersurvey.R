@@ -96,7 +96,7 @@ num_cols <- sapply(flowersurvey, is.numeric)
 flowersurvey <- flowersurvey %>%
   mutate_if(char_cols, ~if_else(. == "", NA_character_, .)) %>%
   mutate_if(num_cols, ~if_else(is.na(.), NA_real_, .))
->>>>>>> d23ee8de28bf3e043ec6ed90d6135a8119afdc61
+#>>>>>>> d23ee8de28bf3e043ec6ed90d6135a8119afdc61
 
 # You used "m/d/y" format, but we need to tell the program to read it as that
 # instead of simply a random character variable
