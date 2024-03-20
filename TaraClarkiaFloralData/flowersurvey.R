@@ -148,8 +148,8 @@ flowersurvey_DOY <- flowersurvey %>%
          scnd_flwr_doy = yday(scnd_flwr_date) + ifelse(year_scnd_flwr == 2024, 365, 0)) %>%
   
 #commented this out for now, can bring it in later
-  #mutate(year_third_flwr = year(third_flwr_date),
-         #third_flwr_doy = yday(third_flwr_date) + ifelse(year_third_flwr == 2024, 365, 0)) %>%
+  mutate(year_third_flwr = year(third_flwr_date),
+         third_flwr_doy = yday(third_flwr_date) + ifelse(year_third_flwr == 2024, 365, 0)) %>%
 
   # rename tag_name as pop_fam so we know it is telling us the population and family
   rename(pop_fam = tag_name) %>%
@@ -201,7 +201,7 @@ ggplot(flowersurvey_DOY, aes(x = flwr_doy, y = pop_name)) +
   geom_boxplot()
 
 # plot height of first flower by population
-ggplot(data = flowersurvey_DOY, aes(x = pop_name, y = ttl_stem_lngth_flwr)) +
+ggplot(data = flowersurvey_DOY_clim, aes(x = reorder(pop_name, elevation), y = ttl_stem_lngth_flwr)) +
   geom_point() +
   theme_bw()
 # great news!! This is very similar to Louisa's data, lovely to see
@@ -213,6 +213,17 @@ ggplot(flowersurvey_DOY, aes(x = time_fst_flwr, y = pop_name)) +
   geom_boxplot()
 # interesting data, most of the time it is 15-20 days after budding that the first flower will appear
 # keep in mind that weekly census was done for budding
+
+#could summarize flower survey to look at with proportion
+
+flowersurvey_DOY_pop <- flowersurvey_DOY %>%
+  group_by(pop_name) %>%
+  summarize(
+    flwr_doy = mean(flwr_doy),
+    pop_name = first(pop_name),
+    third_flwr_doy = mean(third_flwr_doy),
+    ttl_stem_lngth_flwr = mean(ttl_stem_lngth_flwr)
+  )
 
 # COLOR PROPORTION DATA AND GRAPHING ----
 # what about looking at color stuff, possibly look at the proportion of diff. colors
@@ -237,13 +248,15 @@ pollen_color_prop <- flowersurvey_DOY %>%
   group_by(pop_name) %>%
   mutate(total_count = sum(count),
          #calculate proportion of each color within each population
-         proportion = count / total_count)
+         proportion = count / total_count) %>%
+  #add climate data
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
 
 #let's plot
 
 # Assuming you have a vector of custom colors for each variable
 custom_colors <- c("#ffe4c4", "#c8a2c8", "#C71585", "#800080", "#FFFFFF")
-ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_subj)) +
+ggplot(pollen_color_prop, aes(x = reorder(pop_name, bFFP), y = proportion, fill = pollen_color_subj)) +
   geom_bar(stat = "identity", position = "stack") +
   labs(title = "Proportion of Pollen Colors in Each Population",
        x = "Population",
@@ -261,7 +274,8 @@ ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_
     legend.position = "bottom"  # Move legend to the bottom
   )
 
-
+# interesting variables are latitude, elevation, 
+# Tave_sm (more cream prop tends to be in populations with hotter summers),
 
 
 ###### Mosaic map plot: pollen color ----
@@ -281,25 +295,8 @@ ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_
   # also consider that you may want to make a mosaic that considers proportions per population, idk, think about
 
 # map
-## fix proportion data frames to be usable for a mosaic plot  
-pollen_color_prop_wide <- pollen_color_prop %>%
-  pivot_wider(names_from = pollen_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
 
-#NOTE FOR TARA MOVE LINES 291 TO 301 TO A NEW RSCRIPT CALLED codegraveyard
-#clean the lat long data info (select populations, columns to keep)
-
-Lat_Long_Elev_Data <- read.csv("TaraClarkiaFloralData/Clarkia_seed_inventory - LatLongElev.csv")
-
-#select the columns to keep 
-Selected_Lat_Long_Elev_Data <- select(Lat_Long_Elev_Data, "abbr_site", "lat", "long", "elev_m")
-#select populations to keep
-Final_Lat_Long_Elev_Data <- Selected_Lat_Long_Elev_Data[Selected_Lat_Long_Elev_Data$abbr_site %in% c("CRE", "FUR", "GPN", "HES", "JCP", "KAB", "LIC", "LRR", "MEB", "OGP", "PMS", "STM", "SUC", "TIC"), ]
-  #change the name of abbr_site to pop_name 
-Final_Lat_Long_Elev_Data_PopName <- Final_Lat_Long_Elev_Data %>%
-  rename(pop_name = abbr_site)
-#merge LatLong data onto proportion 
-merged_PollenProp_LatLongElev <- merge(Final_Lat_Long_Elev_Data_PopName, pollen_color_prop_wide, by = "pop_name")
-
+#### ADDING CLIMATE AND GEOGRAPHIC DATA ####
 # merging dataframe with climate and geographic information
 flowersurvey_DOY_clim <- flowersurvey_DOY %>%
 #left join by the two columns that include the pick abbreviation in the two data frames
@@ -346,6 +343,7 @@ map_base <-
   geom_sf(data = state_prov, fill = "white", color = "black") +
   coord_sf(xlim = c(-125, -114), ylim = c(41, 51)); map_base
 
+# option 2b:
 # can reproject to a nice projection for that part of the world; there might be a better one than this
 
 state_prov_proj <- st_transform(state_prov, 32610)
@@ -357,15 +355,72 @@ map_base <-
 
 # pick which base map you like best and then add pies
 
-map_base + geom_scatterpie(data = merged_PollenProp_LatLongElev, 
-                    aes(x = long, y = lat, group = pop_name),
-                    cols = c("cream", "lavender", "pink", "purple"), 
-                    # These are the names of the columns that will make up the pies, not the names of colors R should use 
-                    pie_scale = 8, alpha = 0.8) +
-  scale_fill_manual(values = c("#ffe4c4", "#c8a2c8", "#C71585", "#800080"))
-# these are the colors to use, in the same order as the columns
+# map for pollen proportion
+
+## fix proportion data frames to be usable for a mosaic plot  
+pollen_color_prop_wide <- pollen_color_prop %>%
+  pivot_wider(names_from = pollen_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
+
+# combine pollen proportion with climate and geographic information for each population
+pollen_prop_clim_geo <- pollen_color_prop_wide %>%
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
 
 
+pollen_map <- map_base + geom_scatterpie(data = pollen_prop_clim_geo, 
+                                         aes(x = longitude, y = latitude, group = pop_name),
+                                         cols = c("cream", "lavender", "pink", "purple"), 
+                                         # These are the names of the columns that will make up the pies, not the names of colors R should use 
+                                         pie_scale = 8, alpha = 0.8) +
+            theme_bw() +
+            ggtitle("Pollen Map") +
+            scale_fill_manual(values = c("#ffe4c4", "#c8a2c8", "#C71585", "#800080"))
+              # these are the colors to use, in the same order as the columns
+pollen_map
+
+# map for petal proportion
+
+## fix proportion data frames to be usable for a mosaic plot  
+petal_color_prop_wide <- petal_color_prop %>%
+  pivot_wider(names_from = overall_petal_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
+
+# combine pollen proportion with climate and geographic information for each population
+petal_prop_clim_geo <- petal_color_prop_wide %>%
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
+
+
+petal_map <- map_base + geom_scatterpie(data = petal_prop_clim_geo, 
+                           aes(x = longitude, y = latitude, group = pop_name),
+                           cols = c("lavender", "pink", "purple"), 
+                           # These are the names of the columns that will make up the pies, not the names of colors R should use 
+                           pie_scale = 8, alpha = 0.8) +
+            theme_bw() +
+            ggtitle("Petal Map") +
+            scale_fill_manual(values = c("#c8a2c8", "#C71585", "#800080"))
+      # these are the colors to use, in the same order as the columns
+petal_map
+
+# map for anther proportion
+
+## fix proportion data frames to be usable for a mosaic plot  
+anther_color_prop_wide <- anther_color_prop %>%
+  pivot_wider(names_from = anther_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
+
+# combine pollen proportion with climate and geographic information for each population
+anther_prop_clim_geo <- anther_color_prop_wide %>%
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
+
+
+anther_map <- map_base + geom_scatterpie(data = anther_prop_clim_geo, 
+                           aes(x = longitude, y = latitude, group = pop_name),
+                           cols = c("cream", "lavender", "pink", "purple"), 
+                           # These are the names of the columns that will make up the pies, not the names of colors R should use 
+                           pie_scale = 8, alpha = 0.8) +
+             theme_bw() +
+             ggtitle("Anther Map") +
+             scale_fill_manual(values = c("#ffe4c4", "#c8a2c8", "#C71585", "#800080"))
+    # these are the colors to use, in the same order as the columns
+
+anther_map
 
 
 ##### Petal color ----
@@ -386,12 +441,15 @@ petal_color_prop <- flowersurvey_DOY %>%
   group_by(pop_name) %>%
   mutate(total_count = sum(count),
          #calculate proportion of each color within each population
-         proportion = count / total_count)
+         proportion = count / total_count) %>%
+  #add climate data
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name")) %>%
+  left_join(flowersurvey_DOY_pop, by = c("pop_name" = "pop_name"))
 
 #let's plot?
 custom_colors <- c("#c8a2c8", "#C71585", "#800080")
 
-ggplot(petal_color_prop, aes(x = pop_name, y = proportion, fill = overall_petal_color_subj)) +
+ggplot(petal_color_prop, aes(x = reorder(pop_name, flwr_doy), y = proportion, fill = overall_petal_color_subj)) +
   geom_bar(stat = "identity", position = "stack") + #creating a stacked bar plot
   labs(title = "Proportion of Petal Colors in Each Population",
        x = "Population",
@@ -408,6 +466,8 @@ ggplot(petal_color_prop, aes(x = pop_name, y = proportion, fill = overall_petal_
     panel.grid.minor = element_blank(),   # Make minor grid lines invisible
     legend.position = "bottom"  # Move legend to the bottom
   )
+# look at flwr_doy, ttl_stem_lngth_flwr, latitude, elevation, CMD_sm (no pattern in gs and sp; lower CMD populations tend to have more pink and purple)
+
 
 ##### Anther color ----
 anther_color_prop <- flowersurvey_DOY %>%
@@ -427,11 +487,14 @@ anther_color_prop <- flowersurvey_DOY %>%
   group_by(pop_name) %>%
   mutate(total_count = sum(count),
          #calculate proportion of each color within each population
-         proportion = count / total_count)
+         proportion = count / total_count)%>%
+  #add climate data
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
+
 
 #plot anther color distribution
 custom_colors <- c("#ffe4c4", "#c8a2c8", "#C71585", "#800080")
-ggplot(anther_color_prop, aes(x = pop_name, y = proportion, fill = anther_color_subj)) +
+ggplot(anther_color_prop, aes(x = reorder(pop_name, latitude), y = proportion, fill = anther_color_subj)) +
   geom_bar(stat = "identity", position = "stack") + #creating a stacked bar plot
   labs(title = "Proportion of Anther Colors in Each Population",
        x = "Population",
@@ -448,6 +511,8 @@ ggplot(anther_color_prop, aes(x = pop_name, y = proportion, fill = anther_color_
     panel.grid.minor = element_blank(),   # Make minor grid lines invisible
     legend.position = "bottom"  # Move legend to the bottom
   )
+
+# latitude, elevation, Tave_sm, CMD_sp
 
 #### VIEWING PLOTS ----
 # I want to view the anthers and pollen color plots side by side
@@ -514,45 +579,23 @@ selected_id <- flowersurvey_DOY$location[which(flowersurvey_DOY$flwr_doy < 300)]
 # Print the result, this will print the location of weird outliers to recheck
 print(selected_id)
 
-#### ADDING CLIMATIC DATA ####
 
-# CHECK FOR THE NEW FILE THAT LOUISA ADDED
 
-# Reading in CSV file with climate data
-climate_data_1981_2022_ALL <- read.csv("TaraClarkiaFloralData/ClimateNA_pop_information_1981-2022MSY.csv")
+# question: what is the within population variation in color depending on time
 
-#Reformat CSV file to pull out combined Tave, PPT, CMD, and DD1040 across all months
-ave_climate_data_1981_2022 <- climate_data_1981_2022_ALL %>%
-  #select necessary columns
-  select(c("Year", "ID2", "Latitude", "Longitude", "Elevation", "MAT", "MAP",
-           "DD1040", "CMD")) %>%
-  rename(pop_name = ID2) %>%
-  group_by(pop_name) %>%
-  summarize(
-    ttl_years = n_distinct(Year),
-    MAT_ave = mean(MAT),
-    MAT_sd = sd(MAT),
-    MAT_se = MAT_sd / sqrt(ttl_years - 1),
-    MAP_ave = mean(MAP),
-    MAP_sd = sd(MAP),
-    MAP_se = MAP_sd / sqrt(ttl_years - 1),
-    CMD_ave = mean(CMD),
-    CMD_sd = sd(CMD),
-    CMD_se = CMD_sd / sqrt(ttl_years - 1),
-    DD1040_ave = mean(DD1040),
-    DD1040_sd = sd(DD1040),
-    DD1040_se = DD1040_sd / sqrt(ttl_years - 1),
-    latitude = first(Latitude),
-    longitude = first(Longitude),
-    elevation = first(Elevation)
-  ) %>%
-  filter(!(pop_name %in% c("BBL", "GPS"))) %>%
-  select(-ttl_years)
+#flowersurvey_DOY
+# overall_petal_color_subj: variable of interest, response variable
+# pop_name: group stuff by
+# third_flwr_doy: time
+custom_colors <- c("#c8a2c8", "#C71585", "#800080")
+
+ggplot(flowersurvey_DOY, aes(x = third_flwr_doy, y = reorder(pop_name, third_flwr_doy), color = overall_petal_color_subj)) +
+  # getting rid of the grey behind
+  theme_bw() +
+  scale_color_manual(values = custom_colors) +
+  geom_quasirandom()
 
 
 
-# combine climatic data frame to flower survey data frame
-flowersurvey_clim <- flowersurvey_DOY %>%
-  #left join by the two columns that include the pick abbreviation in the two data frames
-  left_join(ave_climate_data_1981_2022, by = c("pop_name" = "pop_name"))
+
 
