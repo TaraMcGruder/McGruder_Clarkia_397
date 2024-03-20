@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 location,tag_name,bud_emerg_date,num_buds_at_emerge,flwr_date,ttl_stem_lngth_flwr,buds_at_first_flwr,pollen_color_subj,anther_color_subj,overall_petal_color_subj,petal_pat_color,scnd_flwr_date,third_flwr_date,fourth_flwr_date,exclude,exclude ,notes,key,
 T01-A01,STM_17,11/20/2023,2,12/8/2023,20.2,3,lavender,lavender,pink,0,12/9/2023,12/13/2023,NA,0,,,,not legible; need to see paper copy 
 T01-A03,TIC_09,11/20/2023,3,12/3/2023,18.7,3,cream,cream,pink,1,12/10/2023,12/13/2023,NA,0,,,0,no issues 
@@ -336,7 +335,7 @@ T07-G05,OGP_10,11/27/2023,2,12/13/2023,16.8,4,cream,cream,lavender,1,12/18/2023,
 T07-G07,TIC_07,11/13/2023,1,12/4/2023,17,3,pink,pink,purple,0,12/8/2023,12/10/2023,NA,0,,,,
 T07-G09,SUC_08,11/27/2023,2,12/14/2023,12.6,2,NA,NA,NA,NA,12/20/2023,NA,NA,0,,"dead January 13, 2024; aphid damage; 1st&2nd harvested for spec",,
 T07-G11,PMS_15,11/20/2023,2,12/2/2023,4,2,NA,NA,NA,NA,12/7/2023,NA,NA,0,,"removed from experiment January 20, 2024",,
-=======
+=======,,,,,,,,,,,,,,,,,,
 location,tag_name,bud_emerg_date,num_buds_at_emerge,flwr_date,ttl_stem_lngth_flwr,buds_at_first_flwr,pollen_color_subj,anther_color_subj,overall_petal_color_subj,petal_pat_color,scnd_flwr_date,third_flwr_date,fourth_flwr_date,exclude,exclude ,notes,key,
 T01-A01,STM_17,11/20/2023,2,12/8/2023,20.2,3,lavender,lavender,pink,0,12/9/2023,12/13/2023,NA,0,,,,not legible; need to see paper copy 
 T01-A03,TIC_09,11/20/2023,3,12/3/2023,18.7,3,cream,cream,pink,1,12/10/2023,12/13/2023,NA,0,,,0,no issues 
@@ -674,5 +673,5 @@ T07-G05,OGP_10,11/27/2023,2,12/13/2023,16.8,4,cream,cream,lavender,1,12/18/2023,
 T07-G07,TIC_07,11/13/2023,1,12/4/2023,17,3,pink,pink,purple,0,12/8/2023,12/10/2023,NA,0,,,,
 T07-G09,SUC_08,11/27/2023,2,12/14/2023,12.6,2,NA,NA,NA,NA,12/20/2023,NA,NA,0,,"dead January 13, 2024; aphid damage; 1st&2nd harvested for spec",,
 T07-G11,PMS_15,11/20/2023,2,12/2/2023,4,2,NA,NA,NA,NA,12/7/2023,NA,NA,0,,"removed from experiment January 20, 2024",,
->>>>>>> ad5ca03de8c68ce36dc9be44e1010bc760cc0132
+>>>>>>> ad5ca03de8c68ce36dc9be44e1010bc760cc0132,,,,,,,,,,,,,,,,,,
 T07-G13,BRD_12,,,,,,,,,,,,,1,,never germinated,,

@@ -53,6 +53,7 @@ ave_clim_seasonal <- ave_clim_monthly %>%
     Tave_sm = mean(climatic_var[month %in% c("Tave06_ttl", "Tave07_ttl")]),
     latitude = first(latitude),
     elevation = first(elevation),
+    longitude = first(longitude),
     range_position = first(range_position),
     bFFP = first(bFFP)
   )

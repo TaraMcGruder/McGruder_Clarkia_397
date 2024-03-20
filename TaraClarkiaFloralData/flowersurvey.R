@@ -285,6 +285,7 @@ ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_
 pollen_color_prop_wide <- pollen_color_prop %>%
   pivot_wider(names_from = pollen_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
 
+#NOTE FOR TARA MOVE LINES 291 TO 301 TO A NEW RSCRIPT CALLED codegraveyard
 #clean the lat long data info (select populations, columns to keep)
 
 Lat_Long_Elev_Data <- read.csv("TaraClarkiaFloralData/Clarkia_seed_inventory - LatLongElev.csv")
@@ -298,6 +299,11 @@ Final_Lat_Long_Elev_Data_PopName <- Final_Lat_Long_Elev_Data %>%
   rename(pop_name = abbr_site)
 #merge LatLong data onto proportion 
 merged_PollenProp_LatLongElev <- merge(Final_Lat_Long_Elev_Data_PopName, pollen_color_prop_wide, by = "pop_name")
+
+# merging dataframe with climate and geographic information
+flowersurvey_DOY_clim <- flowersurvey_DOY %>%
+#left join by the two columns that include the pick abbreviation in the two data frames
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
 
 # Map color proportions ----
 
