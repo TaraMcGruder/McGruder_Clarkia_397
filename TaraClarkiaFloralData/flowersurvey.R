@@ -15,7 +15,7 @@
 #       color/color or color + color
 # - check for cell enteries in date columns that have "?"
 # - then redownload google sheet as csv
-    #delete the csv that is in the folder
+    # delete the csv that is in the folder
     # replace the csv with the newly downloaded, rename it the same
 # - rerun all the code and check to see if anything is funky
 
@@ -44,35 +44,35 @@
 # Install and load necessary packages
 # my top packages are always dplyr, tidyr, and ggplot2 if I'm looking at data
 
-# check if the packages are already installed before attempting to install them
-if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
-if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
-if (!requireNamespace("lubridate", quietly = TRUE)) install.packages("lubridate")
-if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
-if (!requireNamespace("stringr", quietly = TRUE)) install.packages("stringr")
-
 # manipulate and analyze data frames
-library(dplyr)  
+# library(dplyr)  
 
 # reshape and tidy data for analysis
-library(tidyr)
+# library(tidyr)
 
 # handling date and time data
-library(lubridate)
+# library(lubridate)
 
 # visualizing data
-library(ggplot2)
+# library(ggplot2)
 
 # working with string operations, good for text extraction
-library(stringr)
+# library(stringr)
 
-
+# MB: can replace all of the packages above with library(tidyverse) which is a megapackage that contains all of these, assuming it installs fine for you
+library(tidyverse)
+library(sf)
+library(scatterpie)
+library(rnaturalearth)
 
 #### CLEAN AND CREATE NEW DATA FRAME ####
 
 # Now that you have finished the huge task of entering your data...
 # Time to load the data using the relative path/directory on the computer
-flowersurvey <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/flowersurvey.csv")
+# flowersurvey <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/flowersurvey.csv")
+# MB: use path here relative to the R project
+flowersurvey <- read.csv("TaraClarkiaFloralData/flowersurvey.csv")
+
 
 # You used "m/d/y" format, but we need to tell the program to read it as that
 # instead of simply a random character variable
@@ -101,7 +101,7 @@ flowersurvey$fourth_flwr_date <- mdy(flowersurvey$fourth_flwr_date)
   # create a column that includes the year and then "if" statements"
 
 flowersurvey_DOY <- flowersurvey %>% 
-mutate(across(where(is.character), str_trim)) %>%
+  mutate(across(where(is.character), str_trim)) %>%
 
 # Create new columns 'year_bud' and 'bud_doy'
   # mutate(newcolumn = ANY FUNCTIONS WITH (old column)) function: create new columns based on existing columns
@@ -143,7 +143,7 @@ mutate(across(where(is.character), str_trim)) %>%
             notes,
             X,
             key),
-#getting rid of columns that contain the phrase "date"         
+# getting rid of columns that contain the phrase "date"         
    -contains("date"),
 # check to see if removing date and year can be combined in one line
     -contains("year")) %>%
@@ -153,7 +153,7 @@ mutate(across(where(is.character), str_trim)) %>%
     time_fst_flwr = flwr_doy - bud_doy,
     time_fst_scnd_flwr = scnd_flwr_doy - flwr_doy)
 
-#START VISUALIZING DATA ----
+# START VISUALIZING DATA ----
 ## Flowering Time ----
 # Create a histogram of flowering time for each population
 ggplot(data = flowersurvey_DOY) + 
@@ -164,7 +164,6 @@ ggplot(data = flowersurvey_DOY) +
 
 summary(flowersurvey_DOY)
 
-
 # plot the data
 ggplot(flowersurvey_DOY, aes(x = flwr_doy, y = pop_name)) +
   geom_boxplot()
@@ -174,13 +173,13 @@ ggplot() +
                                            y = ttl_stem_lngth_flwr))
 
 # COLOR PROPORTION DATA AND GRAPHING ----
-#what about looking at color stuff, possibly look at the proportion of diff. colors
+# what about looking at color stuff, possibly look at the proportion of diff. colors
 # in each population?
 
-#####Pollen color ----
-#make a proportion
+##### Pollen color ----
+# make a proportion
 pollen_color_prop <- flowersurvey_DOY %>%
-  #filter out rows in the pollen color with NA or empty strings
+  # filter out rows in the pollen color with NA or empty strings
   filter(!is.na(pollen_color_subj) & pollen_color_subj != "") %>%
 
     #let's get rid of any weird spacing and capitalization
@@ -199,7 +198,6 @@ pollen_color_prop <- flowersurvey_DOY %>%
          proportion = count / total_count)
 
 #let's plot
-library(ggplot2)
 
 # Assuming you have a vector of custom colors for each variable
 custom_colors <- c("#ffe4c4", "#c8a2c8", "#C71585", "#800080", "#FFFFFF")
@@ -227,127 +225,97 @@ ggplot(pollen_color_prop, aes(x = pop_name, y = proportion, fill = pollen_color_
 ###### Mosaic map plot: pollen color ----
     #start with proportion data frame 
     # use the map pies function 
-install.packages("ggplot2")
-install.packages("ggmap")
-library(ggplot2)
-library(ggmap)
-library(vcd)
+
 #vizualize how the pollen data is distributed to make sure there are no issues
-table(flowersurvey_DOY$pollen_color_subj)
-#PetalvPollen <- xtabs(~pollen_color_subj+ overall_petal_color_subj, data = flowersurvey_DOY)
-#mosaic_plot <- mosaic(PetalvPollen, gp = shading_max, 
-                      #split_vertical = TRUE, 
-                      #main = "PetalvPollen [pollen_color_subj] [overall_petal_color_subj]",
-                      #margin = c(2, 2, 2, 2))
+# table(flowersurvey_DOY$pollen_color_subj)
+# PetalvPollen <- xtabs(~pollen_color_subj+ overall_petal_color_subj, data = flowersurvey_DOY)
+# mosaic_plot <- mosaic(PetalvPollen, gp = shading_max,
+#                       split_vertical = TRUE,
+#                       main = "PetalvPollen [pollen_color_subj] [overall_petal_color_subj]",
+#                       margin = c(2, 2, 2, 2))
 # problem: since I am using flowersurvey_DOY, R is not considering proportions of each variable across the populations which is what I want it to do. 
   #I need to find a way to use the previously made proportion dataframes instead (petal_color_prop and pollen_color_prop)
   # I think you need to make a new data frame that includes the proportion frames (together???) and then substitute that above to compare PROPORTIONS
   # also consider that you may want to make a mosaic that considers proportions per population, idk, think about
-install.packages("tidyr")
-library(tidyr)
-#map
-##fix proportion data frames to be usable for a mosaic plot  
+
+# map
+## fix proportion data frames to be usable for a mosaic plot  
 pollen_color_prop_wide <- pollen_color_prop %>%
   pivot_wider(names_from = pollen_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
 #clean the lat long data info (select populations, columns to keep)
-Lat_Long_Elev_Data <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/Clarkia_seed_inventory - LatLongElev.csv")
-library(dplyr)
-  #select the columns to keep 
+# Lat_Long_Elev_Data <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/Clarkia_seed_inventory - LatLongElev.csv")
+Lat_Long_Elev_Data <- read.csv("TaraClarkiaFloralData/Clarkia_seed_inventory - LatLongElev.csv")
+
+#select the columns to keep 
 Selected_Lat_Long_Elev_Data <- select(Lat_Long_Elev_Data, "abbr_site", "lat", "long", "elev_m")
-  #select populations to keep
+#select populations to keep
 Final_Lat_Long_Elev_Data <- Selected_Lat_Long_Elev_Data[Selected_Lat_Long_Elev_Data$abbr_site %in% c("CRE", "FUR", "GPN", "HES", "JCP", "KAB", "LIC", "LRR", "MEB", "OGP", "PMS", "STM", "SUC", "TIC"), ]
   #change the name of abbr_site to pop_name 
 Final_Lat_Long_Elev_Data_PopName <- Final_Lat_Long_Elev_Data %>%
   rename(pop_name = abbr_site)
 #merge LatLong data onto proportion 
 merged_PollenProp_LatLongElev <- merge(Final_Lat_Long_Elev_Data_PopName, pollen_color_prop_wide, by = "pop_name")
-#load and install necessary packages 
-install.packages("maps")
-install.packages("mapdata")
-library(maps)
-library(mapdata)
-library (ggplot2)
-install.packages("tmap", repos = c("https://r-tmap.r-universe.dev",
-                                   "https://cloud.r-project.org"))
-install.packages("spData")
-install.packages("spDataLarge")
-library(sf)
-library(terra)
-library(dplyr)
-library(spData)
-library(spDataLarge)
-library(tmap)    # for static and interactive maps
-library(leaflet) # for interactive maps
-install.packages("mapproj")
-library(mapproj)
-library(mapdata)
-install.packages("rgeos")
-library(rgeos)
-install.packages("maptools")
-library(maptools)
-library(sp)
-library(raster)
-install.packages("rgdal")
-library(rgdal)
-library(ggplot2)
-library(tidyverse)
-#install.packages(c("maps", "mapdata"))
-# the ggmap package.  Might as well get the bleeding edge version from GitHub
-#devtools::install_github("dkahle/ggmap")
 
-#trial and error
-mapdata <- map_data("world")
-view(mapdata)
+# Map color proportions ----
 
-#general map of the usa
-usa <- map_data("usa") 
-ggplot() + 
-  geom_polygon(data = usa, aes(x = long, y = lat, group = group)) + 
-  coord_quickmap()
+# Goals:
+# - get state and province outlines
+# - plot pies on top of map
+# Would be nice if:
+# - map projection was well suited to area
+# - pies could have little lines pointing to the sites so they don't overlap
+# - pies weren't distorted by map projection
+# but these steps might require writing custom functions etc. 
 
-#general map of us states
+
+
+# Make a single base map that you can use for each flower part
+# To do this, I'm putting the map into an object called base_map (then I put base_map at the end of the map code so it'll print)
+
+# option 1: use map_data, which is housed in ggplot
+# pros: easy, has a aspect ratio based projection that works well with scatterpie
+# cons: only has maps from the fairly limited maps package, so no province outlines
+
+world <- map_data("world")
 states <- map_data("state")
-dim(states)
-head(states)
-tail(states)
-ggplot(data = states) + 
-  geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + 
-  coord_quickmap() +
-  guides(fill = FALSE)  # do this to leave off the color legend
 
-#map of region of interest minus canada
-west_coast <- states %>%
-  filter(region %in% c("california", "oregon", "washington", "nevada", "idaho"))
-ggplot(data = west_coast) + 
-  geom_polygon(aes(x = long, y = lat, group = group), fill = "#ADD8E6", color = "black") + 
-  coord_quickmap()
+map_base <-
+  ggplot() +
+    geom_polygon(data = world, aes(x = long, y = lat, group = group), color = "black", fill = "white") +
+    geom_polygon(data = states, aes(x = long, y = lat, group = group), color = "black", fill = "white") +
+  coord_sf(xlim = c(-125, -114), ylim = c(41, 53)); map_base
 
+# option 2: source map outlines from the r natural earth database
+# pros: has province lines, projection is easy because it's an sf object
+# cons: lose the very simple aspect ratio projection that comes with option 1 and I can't figure out how to specify it. so when piecharts are overlaid, they're stretched
 
-#trying to get both Canada and US on a map now 
-#this doesn't work lol
-library(raster)
-# Get data for states of the USA
-states <- getData(country = "USA", level = 1)
-# Get data for provinces of Canada
-provinces <- getData(country = "Canada", level = 1)
-# Define the names of the states and provinces to include
-desired_regions <- c("British Columbia", "California", "Oregon", "Washington", "Nevada", "Idaho")
-# Filter the states dataset to include only the desired regions
-states <- subset(states, admin == "United States" & name %in% desired_regions)
-# Filter the provinces dataset to include only the desired regions
-provinces <- subset(provinces, admin == "Canada" & name %in% "British Columbia")
-# Plot the filtered states and provinces together
-plot(states)
-plot(provinces, add = TRUE)
+state_prov <- ne_states(c("united states of america", "canada"))
 
+# this data comes in as an sf object so it can be plotted with a slightly different syntax
+map_base <-
+  ggplot() +
+  geom_sf(data = state_prov, fill = "white", color = "black") +
+  coord_sf(xlim = c(-125, -114), ylim = c(41, 51)); map_base
 
+# can reproject to a nice projection for that part of the world; there might be a better one than this
 
-#trying to get both Canada and US on a map
-canada <- map_data("worldHires", "Canada")
-map('state', region = c('california', 'nevada', 'oregon', 'washington', 'idaho'), xlim=c(-130,-90), ylim=c(30,60), fill=TRUE, col="gray95")
-map("worldHires","Canada",  xlim=c(-130,-90), ylim=c(30,60), col="gray95", fill=TRUE, add=TRUE)
+state_prov_proj <- st_transform(state_prov, 32610)
 
-#Megan maps
+map_base <-
+  ggplot() +
+  geom_sf(data = state_prov_proj, fill = "white", color = "black") +
+  coord_sf(xlim = c(-125, -114), ylim = c(41, 51), lims_method = "orthogonal", default_crs = 4326); map_base
+
+# pick which base map you like best and then add pies
+
+map_base + geom_scatterpie(data = merged_PollenProp_LatLongElev, 
+                    aes(x = long, y = lat, group = pop_name),
+                    cols = c("cream", "lavender", "pink", "purple"), 
+                    # These are the names of the columns that will make up the pies, not the names of colors R should use 
+                    pie_scale = 8, alpha = 0.8) +
+  scale_fill_manual(values = c("#ffe4c4", "#c8a2c8", "#C71585", "#800080"))
+# these are the colors to use, in the same order as the columns
+
 
 
 
@@ -529,10 +497,7 @@ ave_climate_data_1981_2022 <- climate_data_1981_2022_ALL %>%
   filter(!(pop_name %in% c("BBL", "GPS"))) %>%
   select(-ttl_years)
 
-# Install the dplyr package if not already installed
-install.packages("dplyr")
-# Load the dplyr package
-library(dplyr)
+
 
 # combine climatic data frame to flower survey data frame
 flowersurvey_clim <- flowersurvey_DOY %>%
