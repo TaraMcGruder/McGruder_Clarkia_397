@@ -5,7 +5,9 @@
 # that is important for Clarkia, the spring (March to May) and summer (June and July)
 
 # Reading in CSV file with climate data
-climate_data_1981_2022_ALL <- read.csv("TaraClarkiaFloralData/ClimateNA_pop_information_1981-2022MSY.csv")
+library(tidyr)
+library(dplyr)
+climate_data_1981_2022_ALL <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_397/TaraClarkiaFloralData/ClimateNA_pop_information_1981-2022MSY.csv")
 
 # first I am going to extract out all the by month data
 
