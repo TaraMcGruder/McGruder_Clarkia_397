@@ -445,11 +445,12 @@ plot(climate$latitude, climate$bFFP)
 # One overview of PCA is here https://www.datacamp.com/tutorial/pca-analysis-r
 
 flowers_for_PCA_pre = flowers %>% 
-  select(pop_fam, pollen_color_subj, anther_color_subj, overall_petal_color_subj, pop_name, range_position, ttl_stem_lngth_flwr, flwr_doy, area, perimeter, trough_length_left, trough_length_right, OL_width_left, OL_width_right, IL_width, solidity, roundness, circularity, aspect_ratio) %>% 
+  select(pop_fam, pollen_color_subj, anther_color_subj, overall_petal_color_subj, pop_name, range_position, ttl_stem_lngth_flwr, flwr_doy, area, perimeter, trough_length_left, trough_length_right, OL_width_left, OL_width_right, IL_width, solidity, roundness, circularity, aspect_ratio, CMD_sm, Tave_sm, latitude) %>% 
   drop_na()
 
+
 flowers_for_PCA = flowers_for_PCA_pre %>% 
-  select(-pollen_color_subj, -anther_color_subj, -overall_petal_color_subj, -pop_name, -range_position) %>% 
+  select(-pollen_color_subj, -anther_color_subj, -overall_petal_color_subj, -pop_name, -range_position, -CMD_sm, -Tave_sm, -latitude) %>% 
   column_to_rownames(var = "pop_fam")
 # Might want to drop some of these
 
@@ -487,9 +488,57 @@ fviz_pca_ind(data_pca,
              geom.ind = "point", 
              addEllipses = TRUE)
 
+# extract PCA axis values and add to flowers data
+d = get_pca_ind(data_pca)
+ind_coords = as.data.frame(d$coord) 
+ind_coords$pop_fam = rownames(d$coord)
+summary(ind_coords)
+flowers_for_PCA_pre$PC1 = ind_coords$Dim.1
+flowers_for_PCA_pre$PC2 = ind_coords$Dim.2
+
+
+
 ## Correlation of PCA axes with climate ----
 
-# to-do
+ggplot(data = flowers_for_PCA_pre, aes(x = CMD_sm, y = PC1)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(data = flowers_for_PCA_pre, aes(x = Tave_sm, y = PC1)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(data = flowers_for_PCA_pre, aes(x = CMD_sm, y = PC2)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(data = flowers_for_PCA_pre, aes(x = Tave_sm, y = PC2)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+
+
+# Area, solidity, aspect ratio are interesting and low correlation metrics
+# Hypotheses could be generated--e.g. do plants from drier or hotter places produce smaller flowers?
+
+ggplot(data = flowers, aes(x = CMD_sm, y = area)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(data = flowers, aes(x = Tave_sm, y = area)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# more solid  = more area for a given size
+
+ggplot(data = flowers, aes(x = CMD_sm, y = solidity)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(data = flowers, aes(x = Tave_sm, y = solidity)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
 
 
 ## Do shape and size characteristics correlate with color or vary across the range? ----
