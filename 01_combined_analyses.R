@@ -10,6 +10,10 @@ library(lmerTest) # for statistical models
 library(ggeffects) # for visualising model fits
 library(cowplot) # for multipanel plots
 library(vegan) # for shannon diversity
+library(ggcorrplot) # for plotting correlations
+library(FactoMineR)
+library(factoextra)
+
 
 # Load data ----
 
@@ -239,7 +243,7 @@ map_base <-
   ggplot() +
   geom_polygon(data = world, aes(x = long, y = lat, group = group), color = "black", fill = "white") +
   geom_polygon(data = states, aes(x = long, y = lat, group = group), color = "black", fill = "white") +
-  coord_sf(xlim = c(-125, -114), ylim = c(41, 53)); map_base
+  coord_sf(xlim = c(-125, -114), ylim = c(41, 51)); map_base
 
 # option 2: source map outlines from the r natural earth database
 # pros: has province lines, projection is easy because it's an sf object
@@ -296,6 +300,7 @@ anther_map <- map_base + geom_scatterpie(data = all_props,
                     labels = c("cream", "lavender", "pink", "purple")); anther_map
 
 ### Map petal colors ----
+
 petal_map <- map_base + geom_scatterpie(data = all_props, 
                                          aes(x = longitude, y = latitude, group = pop_name),
                                          cols = c("petal_proportion_lavender", 
@@ -310,6 +315,7 @@ petal_map <- map_base + geom_scatterpie(data = all_props,
 
 # Now, also plot trends in color over space
 # And analyse trend in dominant color
+# These models below can be explained like: we chose to examine trends in the proportion of plants that had highly pigmented floral parts vs. less pigmented floral parts. 
 
 ## Spatial trends in pollen color ----
 
@@ -346,8 +352,6 @@ plot_grid(pollen_map, pollen_lat_plot)
 ## Spatial trends in anther color ----
 
 m3 <- glmer(is_anther_cream ~ poly(latitude, 2) + (1|pop_name), data = flowers, family = binomial)
-# added a random effect of population because I think we need this. 
-# uncertainty is larger but quadratic effect of latitude is still significant
 
 summary(m3)
 
@@ -364,24 +368,19 @@ anther_lat_plot = ggplot() +
   theme(plot.caption = element_text(hjust = 0)) +
   ylim(-0.01, 1); anther_lat_plot
 
-# May want to adjust aesthetics for this to make colors stand out more
-
 plot_grid(anther_map, anther_lat_plot)
 
 
 ## Spatial trends in petal color ----
 
 # m4 <- glmer(is_petal_lavender ~ poly(latitude, 2) + (1|pop_name), data = flowers, family = binomial)
-# added a random effect of population because I think we need this. 
-# uncertainty is larger but quadratic effect of latitude is still significant
-# not converging for petals so gong back to old method
+# MB: not converging for petals so gong back to old method
 
 m4 <- glm(cbind(petal_count_lavender, total_count - petal_count_lavender) ~ poly(latitude, 2), data = all_props, family = binomial)
 
 summary(m4)
 
 p4 <- (ggpredict(m4, terms = "latitude[all]", type = "fixed")); plot(p4)
-
 
 petal_lat_plot = ggplot() +
   geom_smooth(data = petal_prop_tall, aes(x = latitude, y = proportion, color = color), method = "loess", span = 1, se = FALSE) +
@@ -394,15 +393,14 @@ petal_lat_plot = ggplot() +
   theme(plot.caption = element_text(hjust = 0)) +
   ylim(-0.01, 1); petal_lat_plot
 
-# May want to adjust aesthetics for this to make colors stand out more
-
 plot_grid(petal_map, petal_lat_plot)
 
 ## Spatial trends in color diversity ----
 
 # Higher number = more color diversity
-# These might pair nicely with the first set of stacked bar graphs showing color variation in each population
-# Or with the maps and multi-line plots just above
+# MB: These might pair nicely with the first set of stacked bar graphs showing color variation in each population
+# MB: Or with the maps and multi-line plots just above
+
 
 m5 = lm(shannon_petals ~ poly(latitude, 2), data = all_props)
 summary(m5)
@@ -416,299 +414,142 @@ m7 = lm(shannon_pollen ~ poly(latitude, 2), data = all_props)
 summary(m7)
 plot(ggpredict(m7, terms = c("latitude")))
 
+plot_grid(
+  plot(ggpredict(m5, terms = c("latitude"))), 
+  plot(ggpredict(m6, terms = c("latitude"))),
+  plot(ggpredict(m7, terms = c("latitude"))), ncol = 1)
+
+# MB: These probably technically should have a different response distribution because the Shannon index cannot be negative (I think) but based on a quick google there isn't an obvious choice so I think this approach is good.
 
 
-# STATISTICAL TESTS ----
-#####Quadratic models ----
+# 3. Do floral traits correlate with climate variables? -----
+# Hypotheses: Dark pigmentation might be advantageous under high UV, cool temperatures
+# MB: as a general rule, UV will be highest at low latitudes and high elevations, therefore we'd expect most pigmentation in southern pops. This isn't the case! Interesting.
 
-
-######pollen ----
-#pollen_prop_cream <- pollen_color_prop %>%
-#filter(pollen_color_subj == "cream")
-
-pollen_color_prop_count_wide <- pollen_color_prop %>%
-  pivot_wider(names_from = pollen_color_subj, values_from = count, values_fill = 0, id_cols = c(pop_name, total_count))
-
-# combine pollen proportion with climate and geographic information for each population
-pollen_prop_clim_geo_count <- pollen_color_prop_count_wide %>%
-  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
-
-#plot
-
-
-ggplot(pollen_prop_clim_geo) + 
-  geom_point(aes(y = cream, x = latitude), color = "black") +
-  geom_line(data = p2, aes(y = predicted, x = x), color = "black", size = 0.6) + # Adjust size as needed
-  geom_ribbon(data = p2, aes(ymin = conf.low, ymax = conf.high, x = x), alpha = 0.2, fill = "#D7BBA0") +
-  theme_bw() +  # Applying black and white theme
-  labs(title = "Pollen Proportion vs. Latitude", x = "Latitude", y = "Pollen Proportion") +  # Adding axis titles
-  theme(plot.title = element_text(face = "bold", hjust = 0.5),  # Making title bold and centered
-        axis.title = element_text(face = "bold"))  # Making axis titles bold
-
-######petals----
-#petal quadratic model 
-petal_color_prop_count_wide <- petal_color_prop %>%
-  pivot_wider(names_from = overall_petal_color_subj, values_from = count, values_fill = 0, id_cols = c(pop_name, total_count))
-
-# combine pollen proportion with climate and geographic information for each population
-petal_prop_clim_geo_count <- petal_color_prop_count_wide %>%
-  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
-
-#model
-m3 <- glm(cbind(lavender, total_count - lavender) ~ poly(latitude, 2), data = petal_prop_clim_geo, family = binomial)
-summary(m3)
-p3 <- (ggpredict(m3, terms = "latitude"))
-plot(ggpredict(m3, terms = "latitude"))
-
-ggplot(petal_prop_clim_geo) + 
-  geom_point(aes(y = lavender, x = latitude), color = "#301934") +
-  geom_line(data = p3, aes(y = predicted, x = x), color = "#301934", size = 0.6) + # Adjust size as needed
-  geom_ribbon(data = p3, aes(ymin = conf.low, ymax = conf.high, x = x), alpha = 0.2, fill = "#C3B1E1") +
-  theme_bw() +  # Applying black and white theme
-  labs(title = "Petal Proportion vs. Latitude", x = "Latitude", y = "Petal Proportion") +  # Adding axis titles
-  theme(plot.title = element_text(face = "bold", hjust = 0.5),  # Making title bold and centered
-        axis.title = element_text(face = "bold"))  # Making axis titles bold
-
-#run this for climate predictors and tissue types (copy and paste this to your ImageJ_Data_Analysis.R project)
-m4 <- glm(cbind(lavender, total_count - lavender) ~ Tave_sm, data = petal_prop_clim_geo_count, family = binomial)
-summary(m4)
-p4 <- (ggpredict(m4, terms = "latitude"))
-plot(ggpredict(m4, terms = "Tave_sm"))
-
-ggplot(pollen_prop_clim_geo) + 
-  geom_point(aes(y = cream, x = latitude)) +
-  geom_line(data = p2, aes(y = predicted, x = x)) +
-  geom_ribbon(data = p2, aes(ymin = conf.low, ymax = conf.high, x = x), alpha = 0.2)
-
-
-
-
-
-#multiple line plot 
-#petals
-petal_prop_long <- petal_prop_clim_geo %>%
-  pivot_longer(cols = c (lavender, pink, purple), names_to = "color")
-
-ggplot(petal_prop_long) + geom_smooth(aes(x = Tave_sm, y = value, color = color, fill = color), method = "glm", method.args = list(family = binomial), se = FALSE)
-
-
-
-
-# 3. Do floral traits correlate with climate variables -----
-
-# First, a quick look at how latitude correlates with climate variables, this could be useful later
+# First, a quick look at how latitude correlates with climate variables
 plot(climate$latitude, climate$CMD_sp)
 plot(climate$latitude, climate$CMD_sm)
 plot(climate$latitude, climate$CMD_gs)
 plot(climate$latitude, climate$Tave_gs)
 plot(climate$latitude, climate$bFFP)
 
+
+
+
+
+
 # 4. Are there floral "syndromes"? -----
-# Do shape and size characteristics correlate with color or vary across populations? -----
-# Also look at associations of color on different organs
-# PCA
-# Contingency tests
-# Correlation of 
+
+## PCA ----
+# MB: You have so many traits to work with!
+# One overview of PCA is here https://www.datacamp.com/tutorial/pca-analysis-r
+
+flowers_for_PCA_pre = flowers %>% 
+  select(pop_fam, pollen_color_subj, anther_color_subj, overall_petal_color_subj, pop_name, range_position, ttl_stem_lngth_flwr, flwr_doy, area, perimeter, trough_length_left, trough_length_right, OL_width_left, OL_width_right, IL_width, solidity, roundness, circularity, aspect_ratio) %>% 
+  drop_na()
+
+flowers_for_PCA = flowers_for_PCA_pre %>% 
+  select(-pollen_color_subj, -anther_color_subj, -overall_petal_color_subj, -pop_name, -range_position) %>% 
+  column_to_rownames(var = "pop_fam")
+# Might want to drop some of these
+
+corr_matrix = cor(flowers_for_PCA)
+ggcorrplot(corr_matrix)
+
+data_pca = prcomp(flowers_for_PCA, scale = TRUE)
+summary(data_pca)
+
+fviz_pca_biplot(data_pca, geom.ind = "point")
+
+pollen_groups = flowers_for_PCA_pre$pollen_color_subj
+fviz_pca_ind(data_pca, 
+             col.ind = pollen_groups, 
+             palatte = c("#ffe4c4", "#c8a2c8", "#C71585", "#800080"), 
+             geom.ind = "point", 
+             addEllipses = TRUE)
+# Dunno why palatte isn't working
+
+petal_groups = flowers_for_PCA_pre$overall_petal_color_subj
+fviz_pca_ind(data_pca, 
+             col.ind = petal_groups, 
+             geom.ind = "point", 
+             addEllipses = TRUE)
+
+position_groups = flowers_for_PCA_pre$range_position
+fviz_pca_ind(data_pca, 
+             col.ind = position_groups, 
+             geom.ind = "point", 
+             addEllipses = TRUE)
+
+pop_groups = flowers_for_PCA_pre$pop_name
+fviz_pca_ind(data_pca, 
+             col.ind = pop_groups, 
+             geom.ind = "point", 
+             addEllipses = TRUE)
+
+## Correlation of PCA axes with climate ----
+
+# to-do
 
 
+## Do shape and size characteristics correlate with color or vary across the range? ----
+# Or with climate?
+
+# to-do
 
 
+## Are light anthers associated with light pollen associated with light petals etc.? ----
+# Can visualise and test with a contingency test (fisher's exact) 
+
+# Pollen and anthers
+
+ggplot(data = filter(flowers, !is.na(anther_color_subj))) +
+  geom_count(aes(x = pollen_color_subj, y = anther_color_subj, color = anther_color_subj, fill = pollen_color_subj), shape = 21, stroke = 1.5) +
+  scale_color_manual(values = custom_pollen_colors, guide = "none") +
+  scale_fill_manual(values = custom_pollen_colors, guide = "none") +
+  labs(x = "Pollen color (center of circles)", y = "Anther color (outline of circles)") 
+# Seems like cream anthers very rarely produce pigmented pollen. But pigmented anthers may produce any color of pollen. 
+
+ggplot(data = filter(flowers, !is.na(anther_color_subj))) +
+  geom_bar(aes(x = pollen_color_subj, fill = anther_color_subj), position = "fill") +
+  scale_fill_manual(values = custom_pollen_colors, guide = "none") +
+  labs(x = "Pollen color", y = "Anther color") 
+# This is a pretty nice way to see that anther color and pollen color match quite often
+
+fisher.test(table(flowers$pollen_color_subj, flowers$anther_color_subj), simulate.p.value = TRUE)
+# MB: There's probably some other interesting test to do like, do they match nonrandomly... I can think about this.
 
 
+# Anthers and petals
+
+ggplot(data = filter(flowers, !is.na(anther_color_subj))) +
+  geom_count(aes(x = overall_petal_color_subj, y = anther_color_subj, color = anther_color_subj, fill = overall_petal_color_subj), shape = 21, stroke = 1.5) +
+  scale_color_manual(values = custom_pollen_colors, guide = "none") +
+  scale_fill_manual(values = custom_petal_colors, guide = "none") +
+  labs(x = "Petal color (center of circles)", y = "Anther color (outline of circles)") 
+# No striking association of anthers and petal colors
+
+ggplot(data = filter(flowers, !is.na(anther_color_subj))) +
+  geom_bar(aes(x = overall_petal_color_subj, fill = anther_color_subj), position = "fill") +
+  scale_fill_manual(values = custom_pollen_colors, guide = "none") +
+  labs(x = "Petal color", y = "Anther color") 
+
+fisher.test(table(flowers$overall_petal_color_subj, flowers$anther_color_subj), simulate.p.value = TRUE)
 
 
+# Pollen and petals
 
+ggplot(data = filter(flowers, !is.na(anther_color_subj))) +
+  geom_count(aes(x = overall_petal_color_subj, y = pollen_color_subj, color = pollen_color_subj, fill = overall_petal_color_subj), shape = 21, stroke = 1.5) +
+  scale_color_manual(values = custom_pollen_colors, guide = "none") +
+  scale_fill_manual(values = custom_petal_colors, guide = "none") +
+  labs(x = "Petal color (center of circles)", y = "Anther color (outline of circles)") 
+# No striking association of pollen and petal colors
 
+ggplot(data = filter(flowers, !is.na(anther_color_subj))) +
+  geom_bar(aes(x = overall_petal_color_subj, fill = pollen_color_subj), position = "fill") +
+  scale_fill_manual(values = custom_pollen_colors, guide = "none") +
+  labs(x = "Petal color", y = "Pollen color") 
 
-
-
-
-
-
-
-
-
-
-
-#### MOSAIC PLOTS:----
-
-
-
-
-#### WITHIN POP. VARIATION ----
-# question: what is the within population variation in color depending on time
-
-#flowersurvey_DOY
-# overall_petal_color_subj: variable of interest, response variable
-# pop_name: group stuff by
-# third_flwr_doy: time
-
-custom_colors <- c("#c8a2c8", "#C71585", "#800080")
-ggplot(flowersurvey_DOY, aes(x = third_flwr_doy, y = reorder(pop_name, third_flwr_doy), color = overall_petal_color_subj)) +
-  # getting rid of the grey behind
-  theme_bw() +
-  scale_color_manual(values = custom_colors) +
-  geom_jitter()
-
-
-library(ggplot2)
-ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, CMD_sm), y = area, group = pop_name)) +
-  geom_boxplot(fill = "#4682b4") + 
-  ylab("Area") +
-  xlab("Population") +
-  ggtitle("Area by Population x CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-
-##perimeter comparisons----
-ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, CMD_sm), y = perimeter, group = pop_name, fill = pop_name)) + 
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Perimeter") +
-  xlab("Population") +
-  ggtitle("Perimeter X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-##circularity comparisons---- 
-ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, latitude), y = circularity, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Circularity") +
-  xlab("Population") +
-  ggtitle("Circularity by Population") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-##aspect ratio comparisons----
-ggplot(data = ImageJ_Data_clim, aes(x = reorder (pop_name, CMD_sm), y = aspect_ratio, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Aspect Ratio") +
-  xlab("Population") +
-  ggtitle("Aspect Ratio X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-##roundness comparisons----
-ggplot(data = ImageJ_Data_clim, aes(x = reorder (pop_name, CMD_sm), y = roundness, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Roundness") +
-  xlab("Population") +
-  ggtitle("Roundness X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-##solidity comparisons----
-ggplot(data = ImageJ_Data_Cleaned_NAomit_Rename, aes(x = pop_name, y = solidity, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Solidity") +
-  xlab("Population") +
-  ggtitle("Solidity by Population") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-##inner lobe comparisons----
-ggplot(data = ImageJ_Data_clim, aes(x = reorder (pop_name, CMD_sm), y = IL_width, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Inner Lobe width") +
-  xlab("Population") +
-  ggtitle("Inner Lobe Width X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-##outer lobe width comparisons----
-###left----
-ggplot(data = ImageJ_Data_Cleaned_NAomit_Rename, aes(x = pop_name, y = OL_width_left, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Left Outer Lobe Width") +
-  xlab("Population") +
-  ggtitle("Left Outer Lobe Width by Population") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-###right----
-ggplot(data = ImageJ_Data_Cleaned_NAomit_Rename, aes(x = pop_name, y = OL_width_right, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Right Outer Lobe Width") +
-  xlab("Population") +
-  ggtitle("Right Outer Lobe Width by Population") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-
-
-#view plots side by side 
-# Plotting left trough lengths
-OL_left_plot <- ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, CMD_sm), y = OL_width_left, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Left Outer Lobe Width") +
-  xlab("Population") +
-  ggtitle("Left Outer Lobe Width X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.x = element_text(angle = 45, hjust = 1)) +  # Tilting x-axis title
-  theme_bw()
-
-# Plotting right trough lengths
-OL_right_plot <- ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, CMD_sm), y = OL_width_right, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Right Outer Lobe Width") +
-  xlab("Population") +
-  ggtitle("Right Outer Lobe Width X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.x = element_text(angle = 45, hjust = 1)) +  # Tilting x-axis title
-  theme_bw()
-
-# Combine plots
-combined_OL_plot <- grid.arrange(OL_left_plot, OL_right_plot, ncol = 2)
-
-
-
-
-
-
-
-##trough length comparisons---- 
-###left----
-ggplot(data = ImageJ_Data_Cleaned_NAomit_Rename, aes(x = pop_name, y = trough_length_left, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Left Trough Length") +
-  xlab("Population") +
-  ggtitle("Left Trough Length by Population") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-###right----
-ggplot(data = ImageJ_Data_Cleaned_NAomit_Rename, aes(x = pop_name, y = trough_length_right, group = pop_name, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Right Trough Length") +
-  xlab("Population") +
-  ggtitle("Right Trough Length by Population") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()
-
-
-#view plots side by side
-library(ggplot2)
-library(gridExtra)
-
-# Plotting left trough lengths
-left_trough_plot <- ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, CMD_sm), y = trough_length_left, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Left Trough Length") +
-  xlab("Population") +
-  ggtitle("Left Trough Length X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.x = element_text(angle = 45, hjust = 1)) +  # Tilting x-axis title
-  theme_bw()
-
-# Plotting right trough lengths
-right_trough_plot <- ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, CMD_sm), y = trough_length_right, fill = pop_name)) +
-  geom_boxplot(fill = "#4682b4") +
-  ylab("Right Trough Length") +
-  xlab("Population") +
-  ggtitle("Right Trough Length X CMD_sm") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.x = element_text(angle = 45, hjust = 1)) +  # Tilting x-axis title
-  theme_bw()
-
-# Combine plots
-combined_trough_plot <- grid.arrange(left_trough_plot, right_trough_plot, ncol = 2)
-
-
-
-# STATISTICAL TESTS ----
-
-
-
-
-
+fisher.test(table(flowers$overall_petal_color_subj, flowers$pollen_color_subj), simulate.p.value = TRUE)
 
