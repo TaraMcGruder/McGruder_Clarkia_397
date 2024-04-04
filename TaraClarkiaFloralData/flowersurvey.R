@@ -495,8 +495,8 @@ map_base <-
   coord_sf(xlim = c(-125, -114), ylim = c(41, 51), lims_method = "orthogonal", default_crs = 4326); map_base
 
 # pick which base map you like best and then add pies
-
-# map for pollen proportion
+library(scatterpie)
+###### pollen map proportion ----
 ## fix proportion data frames to be usable for a mosaic plot  
 pollen_color_prop_wide <- pollen_color_prop %>%
   pivot_wider(names_from = pollen_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
@@ -512,12 +512,14 @@ pollen_map <- map_base + geom_scatterpie(data = pollen_prop_clim_geo,
                                          # These are the names of the columns that will make up the pies, not the names of colors R should use 
                                          pie_scale = 8, alpha = 0.8) +
   theme_bw() +
-  ggtitle("Pollen Map") +
+  ggtitle("Pollen Color Distribution Map") +
   scale_fill_manual(values = c("#ffe4c4", "#c8a2c8", "#C71585", "#800080"))
 # these are the colors to use, in the same order as the columns
 pollen_map
 
-# map for petal proportion
+
+
+##### petal map proportion ----
 ## fix proportion data frames to be usable for a mosaic plot  
 petal_color_prop_wide <- petal_color_prop %>%
   pivot_wider(names_from = overall_petal_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
@@ -533,12 +535,12 @@ petal_map <- map_base + geom_scatterpie(data = petal_prop_clim_geo,
                                         # These are the names of the columns that will make up the pies, not the names of colors R should use 
                                         pie_scale = 8, alpha = 0.8) +
   theme_bw() +
-  ggtitle("Petal Map") +
+  ggtitle("Petal Color Distribution Map") +
   scale_fill_manual(values = c("#c8a2c8", "#C71585", "#800080"))
 # these are the colors to use, in the same order as the columns
 petal_map
 
-# map for anther proportion
+###### anther map proportion ----
 ## fix proportion data frames to be usable for a mosaic plot  
 anther_color_prop_wide <- anther_color_prop %>%
   pivot_wider(names_from = anther_color_subj, values_from = proportion, values_fill = 0, id_cols = pop_name)
@@ -554,7 +556,7 @@ anther_map <- map_base + geom_scatterpie(data = anther_prop_clim_geo,
                                          # These are the names of the columns that will make up the pies, not the names of colors R should use 
                                          pie_scale = 8, alpha = 0.8) +
   theme_bw() +
-  ggtitle("Anther Map") +
+  ggtitle("Anther Color Distribution Map") +
   scale_fill_manual(values = c("#ffe4c4", "#c8a2c8", "#C71585", "#800080"))
 # these are the colors to use, in the same order as the columns
 
@@ -622,7 +624,7 @@ ggplot(pollen_prop_clim_geo) +
   geom_line(data = p2, aes(y = predicted, x = x), color = "black", size = 0.6) + # Adjust size as needed
   geom_ribbon(data = p2, aes(ymin = conf.low, ymax = conf.high, x = x), alpha = 0.2, fill = "#D7BBA0") +
   theme_bw() +  # Applying black and white theme
-  labs(title = "Pollen Proportion vs. Latitude", x = "Latitude", y = "Pollen Proportion") +  # Adding axis titles
+  labs(title = "Pollen Color: Proportion Cream Over Latitude", x = "Latitude", y = "Pollen Color: Proportion Cream") +  # Adding axis titles
   theme(plot.title = element_text(face = "bold", hjust = 0.5),  # Making title bold and centered
         axis.title = element_text(face = "bold"))  # Making axis titles bold
 
@@ -636,7 +638,7 @@ petal_prop_clim_geo_count <- petal_color_prop_count_wide %>%
   left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
 
 #model
-m3 <- glm(cbind(lavender, total_count - lavender) ~ poly(latitude, 2), data = petal_prop_clim_geo, family = binomial)
+m3 <- glm(cbind(lavender, total_count - lavender) ~ poly(latitude, 2), data = petal_prop_clim_geo_count, family = binomial)
 summary(m3)
 p3 <- (ggpredict(m3, terms = "latitude"))
 plot(ggpredict(m3, terms = "latitude"))
@@ -646,31 +648,51 @@ ggplot(petal_prop_clim_geo) +
   geom_line(data = p3, aes(y = predicted, x = x), color = "#301934", size = 0.6) + # Adjust size as needed
   geom_ribbon(data = p3, aes(ymin = conf.low, ymax = conf.high, x = x), alpha = 0.2, fill = "#C3B1E1") +
   theme_bw() +  # Applying black and white theme
-  labs(title = "Petal Proportion vs. Latitude", x = "Latitude", y = "Petal Proportion") +  # Adding axis titles
+  labs(title = "Petal Color: Proportion Lavender Over Latitude", x = "Latitude", y = "Petal Color: Proportion Lavender") +  # Adding axis titles
   theme(plot.title = element_text(face = "bold", hjust = 0.5),  # Making title bold and centered
         axis.title = element_text(face = "bold"))  # Making axis titles bold
 
-#run this for climate predictors and tissue types (copy and paste this to your ImageJ_Data_Analysis.R project)
-m4 <- glm(cbind(lavender, total_count - lavender) ~ Tave_sm, data = petal_prop_clim_geo_count, family = binomial)
+
+
+######anthers ----
+anther_color_prop_count_wide <- anther_color_prop %>%
+  pivot_wider(names_from = anther_color_subj, values_from = count, values_fill = 0, id_cols = c(pop_name, total_count))
+
+# combine pollen proportion with climate and geographic information for each population
+anther_prop_clim_geo_count <- anther_color_prop_count_wide %>%
+  left_join(ave_clim_seasonal, by = c("pop_name" = "pop_name"))
+
+#plot
+m4 <- glm(cbind(cream, total_count - cream) ~ poly(latitude, 2), data = anther_prop_clim_geo_count, family = binomial)
 summary(m4)
 p4 <- (ggpredict(m4, terms = "latitude"))
-plot(ggpredict(m4, terms = "Tave_sm"))
+plot(ggpredict(m4, terms = "latitude"))
 
-ggplot(pollen_prop_clim_geo) + 
-  geom_point(aes(y = cream, x = latitude)) +
-  geom_line(data = p2, aes(y = predicted, x = x)) +
-  geom_ribbon(data = p2, aes(ymin = conf.low, ymax = conf.high, x = x), alpha = 0.2)
+ggplot(anther_prop_clim_geo) + 
+  geom_point(aes(y = cream, x = latitude), color = "black") +
+  geom_line(data = p4, aes(y = predicted, x = x), color = "black", size = 0.6) + # Adjust size as needed
+  geom_ribbon(data = p4, aes(ymin = conf.low, ymax = conf.high, x = x), alpha = 0.2, fill = "#D7BBA0") +
+  theme_bw() +  # Applying black and white theme
+  labs(title = "Anther Color: Proportion Cream Over Latitude", x = "Latitude", y = "Anther Color: Proportion Cream") +  # Adding axis titles
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),  # Making title bold and centered
+        axis.title = element_text(face = "bold"))  # Making axis titles bold
 
 
 
 
 
-#multiple line plot 
+
+# multiple line plot ----
   #petals
+#Tave_sm
 petal_prop_long <- petal_prop_clim_geo %>%
   pivot_longer(cols = c (lavender, pink, purple), names_to = "color")
 
 ggplot(petal_prop_long) + geom_smooth(aes(x = Tave_sm, y = value, color = color, fill = color), method = "glm", method.args = list(family = binomial), se = FALSE)
 
+#Tave_gs 
+petal_prop_long <- petal_prop_clim_geo %>%
+  pivot_longer(cols = c (lavender, pink, purple), names_to = "color")
 
+ggplot(petal_prop_long) + geom_smooth(aes(x = Tave_gs, y = value, color = color, fill = color), method = "glm", method.args = list(family = binomial), se = FALSE)
 

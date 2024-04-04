@@ -4,14 +4,14 @@ ImageJ_Data <- read.csv("C:/Users/taram/Documents/Lab Analysis/McGruder_Clarkia_
 #exclude notes column and measurements_done column and any other columns that measure basically the same thing
 #new_df <- subset(df, char_var=="m" , select=c(keepvar1, keepvar2)
 ImageJ_Data_Cleaned <- subset(ImageJ_Data, select = c("location", "tag_name", "flwr_number", "area", "perimeter", "circularity", "feret", "feret_angle", "min_feret", "aspect_ratio", "roundness", "solidity", "OL_width_left", "OL_width_right", "IL_width", "trough_length_left", "trough_length_right"))
-View(ImageJ_Data_Cleaned)
 #remove all "NA" entries
 ImageJ_Data_Cleaned_NAomit <- na.omit(ImageJ_Data_Cleaned)
 #add column with just population (to make it easier to make graphs?)
-install.packages("dplyr")
 library(dplyr)
 ImageJ_Data_Cleaned_NAomit_Rename <- rename(ImageJ_Data_Cleaned_NAomit, pop_fam = tag_name)
-
+library(stringr)
+ImageJ_Data_Cleaned_NAomit_Rename <- ImageJ_Data_Cleaned_NAomit_Rename %>%
+  mutate(pop_name = stringr::word(pop_fam, 1, sep = "_"))
 #MERGE CLIMATIC DATA----
 #run climate_data.R dataframe before running these next lines 
 # combine climatic data frame to ImageJ data frame
@@ -23,9 +23,7 @@ ImageJ_Data_clim <- ImageJ_Data_Cleaned_NAomit_Rename %>%
     #make a separate column with only the population
     #mutate() to modify existing column and add a new one with just population
     #extracting words from a string, taking the first word, separated by "_"
-library(stringr)
-ImageJ_Data_Cleaned_NAomit_Rename <- ImageJ_Data_Cleaned_NAomit_Rename %>%
-  mutate(pop_name = stringr::word(pop_fam, 1, sep = "_"))
+
 
 library(ggplot2)
 ggplot(data = ImageJ_Data_clim, aes(x = reorder(pop_name, CMD_sm), y = area, group = pop_name)) +
@@ -130,9 +128,6 @@ combined_OL_plot <- grid.arrange(OL_left_plot, OL_right_plot, ncol = 2)
 
 
 
-
-
-
 ##trough length comparisons---- 
 ###left----
 ggplot(data = ImageJ_Data_Cleaned_NAomit_Rename, aes(x = pop_name, y = trough_length_left, group = pop_name, fill = pop_name)) +
@@ -182,7 +177,48 @@ combined_trough_plot <- grid.arrange(left_trough_plot, right_trough_plot, ncol =
 
 
 # STATISTICAL TESTS ----
+## Quadratic models ----
+### Area ----
+#model
+area_model <- glm(area ~ poly(latitude, 2), data = ImageJ_Data_clim, family = gaussian)
+summary(area_model)
+area_p <- ggpredict(area_model, terms = "latitude")
+plot(area_p)
 
+plot_area_p <- plot(area_p) +
+  geom_point(data = ImageJ_Data_clim, aes(x = latitude, y = area), color = "#555555", size = 1.5) + # Move this line before geom_ribbon and geom_line
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "#ffccdc", alpha = 0.2) +
+  geom_line(data = area_p, aes(y = predicted), color = "black", size = 0.7) +
+  labs(title = "Area Over Latitude") +
+  theme_bw() +
+  theme(axis.title.x = element_text(face = "bold", size = 12, hjust = 0.5, vjust = 0.5, color = "black"),
+        axis.title.y = element_text(face = "bold", size = 12, hjust = 0.5, vjust = 0.5, color = "black"),
+        axis.text = element_text(size = 12, color = "black"),
+        panel.border = element_rect(color = "black"),  
+        panel.background = element_blank(),
+        plot.background = element_blank())
+plot(plot_area_p)
+### Perimeter ----
+perimeter_model <- glm(perimeter ~ poly(latitude, 2), data = ImageJ_Data_clim, family = gaussian)
+summary(perimeter_model)
+perimeter_p <- ggpredict(area_model, terms = "latitude")
+plot(perimeter_p)
+
+plot_perimeter_p <- plot(perimeter_p) +
+  geom_point(data = ImageJ_Data_clim, aes(x = latitude, y = perimeter), color = "#333333", size = 1.5) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "#ffccdc", alpha = 0.2) +
+  geom_line(data = perimeter_p, aes(y = predicted), color = "black", size = 0.7) +
+  labs(title = "Perimeter Over Latitude") +
+  theme_bw() +
+  theme(axis.title.x = element_text(face = "bold", size = 12, hjust = 0.5, vjust = 0.5, color = "black"),
+        axis.title.y = element_text(face = "bold", size = 12, hjust = 0.5, vjust = 0.5, color = "black"),
+        axis.text = element_text(size = 10, color = "black"),
+        panel.border = element_rect(color = "black"),  
+        panel.background = element_blank(),
+        plot.background = element_blank())
+plot(plot_perimeter_p)
+### Aspect Ratio ----
+### Roundness ----
 
 
 
